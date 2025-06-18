@@ -74,8 +74,8 @@ class ConvertToToken:
       cell_size_w = (xmax - xmin) / n_cells_w
 
       # Small value to account for edge values of coords
-      epsilon_x = cell_size_w * 0.01 
-      epsilon_y = cell_size_h * 0.01 
+      epsilon_x = cell_size_w * 0.1 
+      epsilon_y = cell_size_h * 0.1 
 
       for x0 in np.arange(xmin, xmax+epsilon_x, cell_size_w):
           n_rows = 0
