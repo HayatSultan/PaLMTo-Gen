@@ -1,7 +1,7 @@
 from setuptools import setup, find_packages
 
 classifiers = [
-    'Development Status :: 3 - Alpha',
+    'Development Status :: 4 - Beta',
     'Intended Audience :: Education',
     'Operating System :: Microsoft :: Windows :: Windows 10',
     'License :: OSI Approved :: MIT License',
@@ -10,7 +10,7 @@ classifiers = [
 
 setup(
     name='Palmto_gen',
-    version='0.3a1',
+    version='0.3b1',
     packages=find_packages(),
     include_package_data=True,
     package_data={
