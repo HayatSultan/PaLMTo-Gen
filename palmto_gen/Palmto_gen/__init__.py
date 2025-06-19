@@ -74,8 +74,8 @@ class ConvertToToken:
       cell_size_w = (xmax - xmin) / n_cells_w
 
       # Small value to account for edge values of coords
-      epsilon_x = cell_size_w * 0.1 
-      epsilon_y = cell_size_h * 0.1 
+      epsilon_x = cell_size_w * 0.01 
+      epsilon_y = cell_size_h * 0.01 
 
       for x0 in np.arange(xmin, xmax+epsilon_x, cell_size_w):
           n_rows = 0
@@ -129,7 +129,11 @@ class ConvertToToken:
       return grid_center
     
     def merge_with_polygon(self, grid):
-        merged_gdf = gpd.sjoin(self.gdf, grid, how='left', predicate='within')
+        # Include coords right on edge of grid by setting predicate to intersects
+        merged_gdf = gpd.sjoin(self.gdf, grid, how='left', predicate='intersects')
+
+        # Group by index level and take the first
+        merged_gdf = merged_gdf.groupby(level=0).first()
         merged_gdf.drop(columns=['index_right'], inplace=True)
         
         return merged_gdf
