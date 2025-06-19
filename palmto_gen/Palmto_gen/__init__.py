@@ -73,13 +73,9 @@ class ConvertToToken:
       n_cells_w = width / self.cell_size
       cell_size_w = (xmax - xmin) / n_cells_w
 
-      # Small value to account for edge values of coords
-      epsilon_x = cell_size_w * 0.01 
-      epsilon_y = cell_size_h * 0.01 
-
-      for x0 in np.arange(xmin, xmax+epsilon_x, cell_size_w):
+      for x0 in np.arange(xmin, xmax, cell_size_w):
           n_rows = 0
-          for y0 in np.arange(ymin, ymax+epsilon_y, cell_size_h):
+          for y0 in np.arange(ymin, ymax, cell_size_h):
               # bounds
               x1 = x0 + cell_size_w
               y1 = y0 + cell_size_h
@@ -130,12 +126,11 @@ class ConvertToToken:
     
     def merge_with_polygon(self, grid):
         # Include coords right on edge of grid by setting predicate to intersects
-        merged_gdf = gpd.sjoin(self.gdf, grid, how='left', predicate='intersects')
-
-        # Group by index level and take the first
-        merged_gdf = merged_gdf.groupby(level=0).first()
+        merged_gdf = gpd.sjoin(self.gdf, grid, how='left', predicate='within')
         merged_gdf.drop(columns=['index_right'], inplace=True)
         
+        # Drop any rows with 'nan' values in 'ID' column
+        merged_gdf = merged_gdf.dropna(subset=['ID'])
         return merged_gdf
         
 
