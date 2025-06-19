@@ -12,3 +12,7 @@ Change Log
 0.3b1 (18/06/2025)
 -----------------
 - First beta version
+
+0.3b2 (18/06/2025)
+-----------------
+- Second beta version
