@@ -20,16 +20,25 @@ import random
 
 
 def convert_to_points(coord_list):
-    """
-        Convert coordinate pairs into Shapely Point object
+    """Convert coordinate pairs into Shapely Point object.
+
+    Args:
+        coord_list(list): coordinate pairs in (lon, lat) format.
+
+    Returns:
+        list: coordinates-converted Shapely points. 
     """
     return [Point(coord) for coord in coord_list]
 
 
 def process_data(df):
-    """
-        Convert list-formatted trajectory data to individal Point and store it 
-        as GeoDataFrame compliant with WGS84 reference system, ie. (lon, lat) pairs
+    """Convert list-formatted trajectories to individal Shapely Point.
+
+    Args:
+        df(pd.DataFrame): an object that contains at least a "geometry" column.
+
+    Returns:
+        gpd.GeoDataFrame: an object compliant with WGS84 reference system, ie. (lon, lat) pairs.
     """
     tqdm.pandas()
     df['geometry'] = df['geometry'].progress_apply(convert_to_points)
@@ -40,89 +49,113 @@ def process_data(df):
 
 class ConvertToToken:
     def __init__(self, df, area, cell_size):
-        """
-            df: Pandas dataframe containing a 'geometry' column comprised of coordinate pairs in (lon, lat)
-            area: a geodataframe of Shapely polygon delimiting the boundary of a geographical region
-            cell_size: side length of a square cell in a grid covering the area
+        """Initialize a class object.
+        
+        Args:
+            df(dataframe):  an object containing at least a 'geometry' column, 
+                            with each row being a list of coordinate pairs in (lon, lat) format.
+            area(gpd.GeoDataFrame): Shapely polygon delimiting the boundary of a geographical region.
+            cell_size(int): side length of a square cell in an area grid.
+
+        Returns:
+            None.
         """
         self.cell_size = cell_size
         self.gdf = process_data(df)
         self.area = area
 
     def create_grid(self):
-      '''
-      creates a grid of cell size 'n' over a given area
-      returns: the grid and the number of rows
+        """Creates a grid of cell size 'n' over a given area.
 
-      '''
-      # Geographical boundary delimited by (min_lon, min_lat, max_lon, max_lat)
-      xmin, ymin, xmax, ymax = self.area.total_bounds
-      
-      # Calculate distance between two coordinate points of [lat, lon] in meter
-      height = GD((ymin, xmax), (ymax, xmax)).m
-      width = GD((ymin, xmin), (ymin, xmax)).m
+        Generates a regular grid of cells with the specified cell size (in meters)
+        covering the entire bounding box of the study area. The grid cells are 
+        created as Shapely box geometries and stored in a GeoDataFrame.
+        
+        This method converts the cell size from meters to degrees based on the
+        geographic location, accounting for the Earth's curvature.
 
-      # how many cells across and down
-      grid_cells = []
-      
-      # Compute number of cells along height
-      n_cells_h = height / self.cell_size
-      # Convert cell back to degree unit
-      cell_size_h = (ymax - ymin) / n_cells_h
+        Returns: 
+                tuple: A tuple containing:
+                    - cell(gpd.GeoDataFrame): object with grid cells as box 
+                        geometries in the 'geometry' column. CRS is EPSG:4326.
+                    - n_rows(int): number of rows in the grid.
+                    - cell.shape[0]: total number of cells created.
+        """
+        # Geographical boundary delimited by (min_lon, min_lat, max_lon, max_lat)
+        xmin, ymin, xmax, ymax = self.area.total_bounds
+        
+        # Calculate distance between two coordinate points of [lat, lon] in meter
+        height = GD((ymin, xmax), (ymax, xmax)).m
+        width = GD((ymin, xmin), (ymin, xmax)).m
 
-      n_cells_w = width / self.cell_size
-      cell_size_w = (xmax - xmin) / n_cells_w
+        # how many cells across and down
+        grid_cells = []
+        
+        # Compute number of cells along height
+        n_cells_h = height / self.cell_size
+        # Convert cell back to degree unit
+        cell_size_h = (ymax - ymin) / n_cells_h
 
-      for x0 in np.arange(xmin, xmax, cell_size_w):
-          n_rows = 0
-          for y0 in np.arange(ymin, ymax, cell_size_h):
-              # bounds
-              x1 = x0 + cell_size_w
-              y1 = y0 + cell_size_h
-              grid_cells.append(shapely.geometry.box(x0, y0, x1, y1))
-              n_rows += 1
-              # print('n_rows ', n_rows)
+        n_cells_w = width / self.cell_size
+        cell_size_w = (xmax - xmin) / n_cells_w
 
-      cell = gpd.GeoDataFrame(grid_cells, columns=['geometry'], crs="EPSG:4326")
-      print('Number of created cells: ', cell.shape[0])
+        for x0 in np.arange(xmin, xmax, cell_size_w):
+            n_rows = 0
+            for y0 in np.arange(ymin, ymax, cell_size_h):
+                # bounds
+                x1 = x0 + cell_size_w
+                y1 = y0 + cell_size_h
+                grid_cells.append(shapely.geometry.box(x0, y0, x1, y1))
+                n_rows += 1
+                # print('n_rows ', n_rows)
 
-      return cell, n_rows,  cell.shape[0]
+        cell = gpd.GeoDataFrame(grid_cells, columns=['geometry'], crs="EPSG:4326")
+        print('Number of created cells: ', cell.shape[0])
+
+        return cell, n_rows,  cell.shape[0]
 
     def assign_ids(self, grid, n_rows):
-      '''
-      assign each cell an ID (tuple of column and row position)
+        """Assign each cell an unique ID.
 
-      :param: grid: the entire grid
-      :param: n_rows: the number of rows in the grid
-      '''
+        Assignes each grid cell a unique identifier based on its position in the grid. 
+        IDs are tuples of (column_index, row_index) starting from 0. The assignment follows
+        column-major order.
 
-      total = grid.shape[0]
-      n_cols = int(total / n_rows)
+        Args:
+            grid(gpd.GeoDataFrame): area grid returned from create_grid()
+            n_rows: number of rows in the grid
 
-      tuple_list = []
-      for i in range(n_cols):
-          for j in range(n_rows):
-              tuple_list.append(tuple((i, j)))
-      grid['ID'] = tuple_list
+        Returns:
+            grid(gpd.GeoDataFrame): The input object with an additional "ID" column where each row
+            contains a tuple of (col_index, row_index) for each cell.
+        """
+        total = grid.shape[0]
+        n_cols = int(total / n_rows)
 
-      return grid
+        tuple_list = []
+        for i in range(n_cols):
+            for j in range(n_rows):
+                tuple_list.append(tuple((i, j)))
+        grid['ID'] = tuple_list
+
+        return grid
 
     def find_grid_center(self, grid):
-      '''
-      find the centroid of each cell in the grid
-      '''
+        '''
+        find the centroid of each cell in the grid
+        '''
 
-      grid_center = gpd.GeoDataFrame(columns=["geometry", "ID"], geometry='geometry', crs="EPSG:4326")
+        grid_center = gpd.GeoDataFrame(columns=["geometry", "ID"], geometry='geometry', crs="EPSG:4326")
 
-      grid_projected = grid.to_crs("EPSG:3857")
-      centroids = grid_projected.centroid
+        grid_projected = grid.to_crs("EPSG:3857")
+        centroids = grid_projected.centroid
 
-      centroids_4326 = centroids.to_crs("EPSG:4326")
+        centroids_4326 = centroids.to_crs("EPSG:4326")
 
-      grid_center['geometry'] = list(centroids_4326)
-      grid_center["ID"] = grid["ID"]
+        grid_center['geometry'] = list(centroids_4326)
+        grid_center["ID"] = grid["ID"]
 
-      return grid_center
+        return grid_center
     
     def merge_with_polygon(self, grid):
         # Include coords right on edge of grid by setting predicate to intersects
