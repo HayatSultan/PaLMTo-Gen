@@ -141,10 +141,20 @@ class ConvertToToken:
         return grid
 
     def find_grid_center(self, grid):
-        '''
-        find the centroid of each cell in the grid
-        '''
+        """Finds the centroid of each cell in the grid
+        
+        Calculates the geometric center point of each grid cell. It first projects the grid 
+        to a flat plane using EPSG:3857 reference system for accurate geometric calculation,
+        then converts the result back to EPSG:4326 system to maintain consistency with the
+        original reference system.
 
+        Args:
+            grid(gpd.GeoDataFrame): an object with cell geometry and ID columns.
+
+        Returns:
+            grid_center(gpd.GeoDataFrame): a new object with "geometry" and "ID" columns. The former
+            now represents a cell box with its centroid. 
+        """
         grid_center = gpd.GeoDataFrame(columns=["geometry", "ID"], geometry='geometry', crs="EPSG:4326")
 
         grid_projected = grid.to_crs("EPSG:3857")
@@ -158,6 +168,19 @@ class ConvertToToken:
         return grid_center
     
     def merge_with_polygon(self, grid):
+        """Performs spatial joins between trajectory points and grid cells.
+
+        Assigns each trajectory point to its corresponding grid cell using a spatial join
+        operation. Points are matched to grid cells based on which cell polygon they fall 
+        within. Points that don't fall within any grid cell are removed from the result
+
+        Args:
+            grid(gpd.GeoDataFrame): an object with cell geometry and ID columns.
+        
+        Returns:
+            merged_df(gpd.GeoDataFrame): the trajectory points GeoDataFrame with additional "ID" 
+            column containing grid cell ID where each point is located. 
+        """
         # Include coords right on edge of grid by setting predicate to intersects
         merged_gdf = gpd.sjoin(self.gdf, grid, how='left', predicate='within')
         merged_gdf.drop(columns=['index_right'], inplace=True)
