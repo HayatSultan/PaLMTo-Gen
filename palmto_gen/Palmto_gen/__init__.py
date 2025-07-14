@@ -191,7 +191,19 @@ class ConvertToToken:
         
 
     def create_tokens(self):
+        """Convert raw coordinate pairs into tokens of (row_id, col_id).
 
+        Creates a grid over a given area where trajectories are sourced, assign unique IDs 
+        to cells in the grid, compute cell centers and merge original coordinates with their
+        corresponding cell IDs based on which cell they fall into.
+
+        Returns: 
+                tuple: A tuple containing:
+                    - grid_center(gpd.GeoDataFrame): object containing a "geometry" and "ID" column, with 
+                        the former representing a cell by its centroid.
+                    - grouped_df(gpd.GeoDataFrame): object containing three columns -- "trip_id", "geometry"
+                        and "ID". "geometry" represents a trajectory with a sequence of Point objects. 
+        """
         grid, n_rows, num_cells = self.create_grid()
         assigned_grid = self.assign_ids(grid, n_rows)
 
