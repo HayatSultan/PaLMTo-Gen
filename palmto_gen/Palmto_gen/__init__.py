@@ -338,6 +338,20 @@ class NgramGenerator:
  
 
 def process_trigrams(trigrams):
+    """Arrange trigram tuples and their count of occurance in a different format.
+
+    Create a dictionary that has the first two tokens in a trigram tuple as its key and the last token, 
+    as well as the occurance count of the trigram as its value. This arrangement facilitates next-point 
+    prediction through a statistical approach. 
+
+    Args:
+        trigrams(dict): a dictionary of trigram tuples and their occurance count in the format of
+            {(token_1, token_2, token_3): count}.
+    
+    Returns:
+        trigrams_dict(dict): an rearranged trigram dictionary, formatted as {(token_1, token_2): [(token_3, conut), ...]}
+    
+    """
     trigrams_dict = defaultdict(list)
     for trigram, count in trigrams.items():
         first_two_tokens = trigram[:2]
@@ -346,14 +360,30 @@ def process_trigrams(trigrams):
     return trigrams_dict
 
 def process_trigrams_2(trigrams):
-  trigram_dict_2 = defaultdict(list)
-  for trigram in trigrams.keys():
-      trigram_dict_2[(trigram[0]), trigram[-1]].append(trigram[1])
+    """Reorganizes trigrams in an alternative format.
 
-  return trigram_dict_2
+    Transforms a trigram dictionary into a lookup structure where pairs of (first_token, third_token)
+    are mapped to a list of second_tokens. This is useful for finding "bridge" points between two 
+    non-adjacent grid cells.
+
+    Args:
+        trigrams(dict): a dictionary of trigram tuples and their occurance count in the format of
+            {(token_1, token_2, token_3): count}.
+
+    Returns:
+        trigram_dict_2(dict): a dictionary mapping (first_token, third_token) tuples to a list of 
+            middle tokens.
+        
+    """
+    trigram_dict_2 = defaultdict(list)
+    for trigram in trigrams.keys():
+        trigram_dict_2[(trigram[0]), trigram[-1]].append(trigram[1])
+
+    return trigram_dict_2
 
 class TrajGenerator:
     def __init__(self, ngrams, start_end_points, n, grid):
+        # Count the number of occurance of each unique trigrams in both original and reversed versions
         self.trigrams = {key: ngrams['trigrams_original'].get(key, 0) + ngrams['trigrams_reversed'].get(key, 0) for key in set(ngrams['trigrams_original']) | set(ngrams['trigrams_reversed'])}
 
         self.trigram_dict = process_trigrams(self.trigrams)
