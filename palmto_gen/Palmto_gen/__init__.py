@@ -201,7 +201,7 @@ class ConvertToToken:
                 tuple: A tuple containing:
                     - grid_center(gpd.GeoDataFrame): object containing a "geometry" and "ID" column, with 
                         the former representing a cell by its centroid.
-                    - grouped_df(gpd.GeoDataFrame): object containing three columns -- "trip_id", "geometry"
+                    - grouped_df(pd.DataFrame): object containing three columns -- "trip_id", "geometry"
                         and "ID". "geometry" represents a trajectory with a sequence of Point objects. 
         """
         grid, n_rows, num_cells = self.create_grid()
@@ -223,10 +223,35 @@ class ConvertToToken:
 
 class NgramGenerator:
     def __init__(self, sentence_gdf):
+        """Initialize the NgramGenerator with trajectories represented as grid cell sequences.
+
+        Args:
+            sentence_gdf(pd.DataFrame): A pandas DataFrame containing trajectory data where
+                each row represents a trip. Must have an 'ID' column containing lists of 
+                tuples, where each tuple represents a grid cell coordinate (column, row) 
+                that the trajectory passes through. This is typically the output from 
+                ConvertToToken.create_tokens().
+        
+        Returns:
+            None.
+        """
         self.sentences = sentence_gdf['ID'].values.tolist()
 
 
     def find_start_end_points(self):
+        """Extract start and end bigrams from trajectory sequences.
+
+        Identifies the starting and ending positions of every trajectory by extracting the first
+        and last two grid cells. Duplicate consecutive cells are first removed to ensure meaningful
+        start/end points.
+
+        Returns:
+            start_end_points(list): a list of lists. Each inner contains two tuples: the first one
+                represents the start bigram of a trip and the second one the end bigram of a trip.
+                Only trips with more than three unique consecutive cells are included in the result.
+
+        
+        """
         sentences = [[x for i, x in enumerate(lst) if i == 0 or x != lst[i - 1]] for lst in self.sentences]
         
         start_end_points = []
@@ -237,6 +262,16 @@ class NgramGenerator:
         return start_end_points
     
     def reverse_sentences(self, sentences):
+        """Reverse trajectory sequences.
+
+        Args:
+            sentences(list): a list of lists, with the inner list consisting of a sequence of cell IDs.
+        
+        Returns:
+            reversed_sentences(list): a list of lists, with the inner list not containing a reversed version 
+                of original sequences.
+        
+        """
         reversed_sentences = []
         for sent in sentences:
             reverse = sent[::-1]
@@ -246,7 +281,18 @@ class NgramGenerator:
 
 
     def create_ngrams(self):
+        """Extract bigrams and trigrams from the original and reversed trajectory sequences.
 
+        Sentences, converted to list from the "ID" column of input dataframe, are reversed before bigrams and trigrams
+        are extracted from both the original and reversed sentences. Each bigram dictionary also keeps count of unqiue
+        bigram and trigrams. 
+
+        Returns:
+            ngrams(dict): a dictionary of four dictionaries. Each inner dictionary is comprised of items that
+              has a tuple of cell IDs as its key and its number of occurance as the value.
+            start_end_points(list): a list of lists, as returned by find_start_end_points().
+        
+        """
         start_end_points = self.find_start_end_points()
         sentences_reversed = self.reverse_sentences(self.sentences)
         # corpus = self.sentences + sentences_reversed
@@ -282,7 +328,7 @@ class NgramGenerator:
         print(f"\nNumber of Unique Bigrams: {len(bigrams_original)} \nNumber of Unique Trigrams: {len(trigrams_original)}")
 
         ngrams = {
-            'bigrams_orignal': bigrams_original,
+            'bigrams_original': bigrams_original,
             'bigrams_reversed': bigrams_reversed,
             'trigrams_original': trigrams_original,
             'trigrams_reversed': trigrams_reversed
