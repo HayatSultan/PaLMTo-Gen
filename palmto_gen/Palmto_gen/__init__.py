@@ -55,7 +55,7 @@ class ConvertToToken:
                             with each row being a list of coordinate pairs in (lon, lat) format.
             area(gpd.GeoDataFrame): Shapely polygon delimiting the boundary of a geographical region.
             cell_size(int): side length of a square cell in an area grid.
-            
+
         """
         self.cell_size = cell_size
         self.gdf = process_data(df)
@@ -186,7 +186,6 @@ class ConvertToToken:
         merged_gdf = merged_gdf.dropna(subset=['ID'])
         return merged_gdf
         
-
     def create_tokens(self):
         """Convert raw coordinate pairs into tokens of (row_id, col_id).
 
@@ -228,8 +227,6 @@ class NgramGenerator:
                 that the trajectory passes through. This is typically the output from 
                 ConvertToToken.create_tokens().
         
-        Returns:
-            None.
         """
         self.sentences = sentence_gdf['ID'].values.tolist()
 
