@@ -30,7 +30,6 @@ def convert_to_points(coord_list):
     """
     return [Point(coord) for coord in coord_list]
 
-
 def process_data(df):
     """Convert list-formatted trajectories to individal Shapely Point.
 
@@ -220,7 +219,6 @@ class ConvertToToken:
         
         return grid_center, grouped_df
     
-
 class NgramGenerator:
     def __init__(self, sentence_gdf):
         """Initialize the NgramGenerator with trajectories represented as grid cell sequences.
@@ -236,7 +234,6 @@ class NgramGenerator:
             None.
         """
         self.sentences = sentence_gdf['ID'].values.tolist()
-
 
     def find_start_end_points(self):
         """Extract start and end bigrams from trajectory sequences.
@@ -278,7 +275,6 @@ class NgramGenerator:
             reversed_sentences.append(reverse)
 
         return reversed_sentences
-
 
     def create_ngrams(self):
         """Extract bigrams and trigrams from the original and reversed trajectory sequences.
@@ -336,7 +332,6 @@ class NgramGenerator:
 
         return  ngrams, start_end_points
  
-
 def process_trigrams(trigrams):
     """Arrange trigram tuples and their count of occurance in a different format.
 
@@ -770,15 +765,45 @@ class TrajGenerator:
 
         return df, gdf
 
-
 class DisplayTrajs():
     def __init__(self, original_trajs, generated_trajs):
+        """Initialize the DisplayTrajs visualization class with original and synthetic trajectories.
+
+        Creates a visualization handler for comparing original (real) trajectories with 
+        synthetically generated trajectories. This class provides methods to display 
+        trajectories side-by-side on interactive maps and create heatmap visualizations 
+        for spatial distribution analysis.
+
+        Args:
+            original_trajs(list): Original/real trajectories to visualize. Expected format is a list of 
+                trajectories where each trajectory is a list of Shapely Point objects, 
+                e.g., [[Point(x1,y1), Point(x2,y2), ...], ...].
+            generated_trajs (list): Synthetically generated trajectories to compare.
+                Expected format matches original_trajs - list of trajectories where each
+                trajectory is a list of Shapely Point objects.
+        
+        """
         self.original_trajs = original_trajs
         self.generated_trajs =  generated_trajs
 
-
     def plot_map(self, trajs):
+        """Creates an interactive Folium map displaying trajectory paths as polylines.
 
+        Generates an interactive web map centered on the first trajectory point and 
+        renders all trajectories as blue polylines. The map allows users to zoom, 
+        pan, and explore the trajectory patterns interactively.
+
+        Args:
+            trajs (list): A list of trajectories where each trajectory is a list of 
+                shapely Point objects or similar geometry objects with x (longitude) 
+                and y (latitude) attributes. 
+
+        Returns:
+            folium.Map: A Folium map object containing all trajectories visualized 
+                as blue polylines. The map can be displayed in Jupyter notebooks or 
+                saved as HTML.
+        
+        """
         center_coords = (trajs[0][0].y, trajs[0][0].x)
         mymap = folium.Map(location=center_coords, zoom_start=12)
 
@@ -789,8 +814,15 @@ class DisplayTrajs():
 
         return mymap
 
-
     def display_maps(self):
+        """Display original and generated trajectories side-by-side in interactive Folium maps.
+
+        Creates two interactive maps showing original trajectories (left) and generated 
+        trajectories (right) for visual comparison. Each trajectory is rendered as a blue 
+        polyline on its respective map. The maps are displayed in a responsive HTML layout 
+        within Jupyter notebooks or similar environments that support HTML rendering.
+        
+        """
         map1 = self.plot_map(self.original_trajs)
         map2 = self.plot_map(self.generated_trajs)
 
@@ -813,10 +845,30 @@ class DisplayTrajs():
         # Display the HTML
         display(HTML(html))
 
-
     def merge_grid_with_points(self, grid, df, num_cells):
+        """Merges trajectory points with grid cells to determine which region each point belongs to.
 
+        Performs a spatial join between trajectory points and grid cells, assigning each point
+        to its corresponding grid region. The method explodes the trajectory DataFrame to 
+        individual points, converts them to a GeoDataFrame, and then performs a spatial join
+        with the grid to identify which grid cell contains each point.
 
+        Args:
+            grid (gpd.GeoDataFrame): A GeoDataFrame containing the grid cells with their 
+                geometries. Each cell represents a spatial region.
+            df (pd.DataFrame): A DataFrame containing trajectory data with a 'geometry' 
+                column that contains lists of coordinate points for each trajectory.
+            num_cells (int): The total number of cells in the grid. Used to assign 
+                sequential region IDs from 0 to num_cells-1.
+
+        Returns:
+            gpd.GeoDataFrame: A merged GeoDataFrame where each row represents a single 
+                trajectory point with the following additional columns:
+                    - 'Region': The ID of the grid cell containing the point
+                    - 'point_region': The geometry (polygon) of the grid cell containing 
+                    the point, or 'nan' if the point doesn't fall within any grid cell
+        
+        """
         grid['Region'] = [i for i in range(0, num_cells)]
         df = df.explode('geometry')
 
@@ -838,6 +890,25 @@ class DisplayTrajs():
         return merged_df
 
     def plot_heat_map(self, df, area, ax, cell_size):
+        """Creates a heatmap visualization showing the density of trajectory points across grid cells.
+
+        Generates a grid over the specified area, counts the number of trajectory points 
+        falling within each grid cell, and visualizes this density as a heatmap using a 
+        color gradient. The heatmap helps identify areas of high and low trajectory activity.
+
+        Args:
+            df (pd.DataFrame): A DataFrame containing trajectory data with a 'geometry' 
+                column that contains lists of coordinate points for each trajectory.
+            area (gpd.GeoDataFrame): A GeoDataFrame defining the geographical area to be 
+                analyzed. Used to determine grid boundaries and overlay the area outline 
+                on the plot.
+            ax (matplotlib.axes.Axes): The matplotlib axes object on which to draw the 
+                heatmap. Allows integration with existing figure layouts.
+            cell_size (int): The side length of each grid cell in meters. Determines the 
+                spatial resolution of the heatmap - smaller values create finer grids 
+                with more detail.
+        
+        """
         TokenCreator = ConvertToToken(df, area, cell_size)
         grid, n_rows, num_cells = TokenCreator.create_grid()
         df = self.merge_grid_with_points(grid, df, num_cells)
