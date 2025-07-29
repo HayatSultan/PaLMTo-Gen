@@ -20,3 +20,7 @@ Change Log
 0.3b3 (18/06/2025)
 -----------------
 - Third beta version
+
+0.3 (29/07/2025)
+-----------------
+- Third Release

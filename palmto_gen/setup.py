@@ -10,7 +10,7 @@ classifiers = [
 
 setup(
     name='Palmto_gen',
-    version='0.3b3',
+    version='0.3',
     packages=find_packages(),
     include_package_data=True,
     package_data={
@@ -20,8 +20,8 @@ setup(
     long_description=open('README.md').read() + '\n\n' + open('CHANGELOG.md').read(),
     long_description_content_type='text/markdown',
     url='',
-    author='Hayat Sultan',
-    author_email='hayatsul@ualberta.ca',
+    author='Hayat Sultan, Joey Cherisea', 
+    author_email='hayatsul@ualberta.ca, hai.p@northeastern.edu',
     license='MIT',
     classifiers = classifiers,
     keywords='trajectory generation' 'Probablistic Language Models',
