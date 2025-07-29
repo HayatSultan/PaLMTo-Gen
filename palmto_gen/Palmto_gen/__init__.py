@@ -383,6 +383,23 @@ def process_trigrams_2(trigrams):
 
 class TrajGenerator:
     def __init__(self, ngrams, start_end_points, n, grid):
+        """Initialize a generator with ngrams and grid information.
+
+        Args:
+            ngrams(dict): dictionary mapping ngrams to their frequency:
+                -'trigrams_original': dict mapping trigram tuples to their counts;
+                -'trigrams_reversed': dict mapping reversed trigram tuples to their counts;
+                -'bigrams_original': dict mapping bigram tuples to their counts;
+                -'bigrams_reversed': dict mapping reversed bigram tuples to their counts;
+            start_end_points(list): list of tuples where each tuple contains:
+                -first element: a tuple of (first_point, second_point);
+                -second element: a tupe of (second_to_last_point, last_point);
+            n(int): number of trajectories to generate;
+            grid(gpd.GeoDataFrame): GeoDataFrame containing grid cell information with columns:
+                -'geometry': Shapely Point objects representing cell centroids;
+                -'ID': tuple identifiers (row, col) for each grid cell;
+        
+        """
         # Count the number of occurance of each unique trigrams in both original and reversed versions
         self.trigrams = {key: ngrams['trigrams_original'].get(key, 0) + ngrams['trigrams_reversed'].get(key, 0) for key in set(ngrams['trigrams_original']) | set(ngrams['trigrams_reversed'])}
 
@@ -396,6 +413,22 @@ class TrajGenerator:
 
     @staticmethod
     def start_path(start, end):
+        """Create an initial 4-point trajectory by inserting closest points in the middle.
+
+        This method finds the two points (one from start and one from end) that are closest to each other in
+        Euclidean space, then arranges all four points to form a smooth initial segment.
+
+        Agrs:
+            start(tuple): a tuple of two points representing the start of a trip:
+                - First point: starting point as (x, y) coordinates
+                - Second point: second point as (x, y) coordinates
+            end(tuple): a tuple of two points representing the end of a trip:
+                - First point: second-to-last point as (x, y) coordinates
+                - Second point: last point as (x, y) coordinates
+        
+        Returns:
+            path_start(list): an intial trip segment of (outer_point1, close_point1, close_point2, outer_point2).
+        """
         min_distance = float('inf')
         closest_pair = None
 
@@ -417,12 +450,37 @@ class TrajGenerator:
 
     @staticmethod
     def calculate_distance(point1, point2):
+        """Calculate the Euclidean distance between two points in a 2D plane.
+
+        Args:
+            point1(tuple): first point as a tuple of (x, y) coordinates;
+            point2(tuple): second point as a tuple of (x, y) coordinates;
+
+        Returns:
+            Float: always returns a non-negative value.
+        
+        """
         x1, y1 = point1
         x2, y2 = point2
         return math.sqrt((x2 - x1)**2 + (y2 - y1)**2)
 
-
     def find_next_tokens(self, left, right, path_sentence):
+        """Find the next token pairs to extend a trajectory by analysing trigram frequency and spatial distance
+
+        This method identifies potential next tokens for both left and right sides of a growing trajectory. It uses
+        trigram frequency data to find the next probable points, then selects token pairs based on their spatial 
+        proximity to maintain coherence. This method ensures no repeated tokens in the path.
+
+        Args:
+            left(list): a list of two tokens representing left edge of current path;
+            right(list): a list of two tokens representing right edge of current path;
+            path_sentence(list): current path as a list of tokens. Used to prevent selecting tokens that would create 
+                loops in a trajectory;
+        
+        Returns:
+            points(list): a list of 3 token pairs, where each element is a token of ((left_point, right_point)) that 
+                represents an extension of current path.
+        """
         next_tokens_l = dict(self.trigram_dict.get(tuple(left), []))
         next_tokens_r = dict(self.trigram_dict.get(tuple(right), []))
 
@@ -448,6 +506,20 @@ class TrajGenerator:
         return points
 
     def generate_sentences_using_origin_destination(self):
+        """Generate a complete trajectory by connecting origin and destination points through spatial proximity.
+
+        This method creates a trajectory by starting with randomly selected origin-destination pairs
+        and iteratively filling in the path between them. It uses a bidirectional growth approach,
+        extending from both ends simultaneously while maintaining spatial coherence through trigram
+        frequencies and distance minimization. The process continues until the growing ends meet
+        close enough that they can be connected by a single intermediate token.
+
+        Returns:
+            path_sentence(list): A complete trajectory as a list of tokens (coordinate tuples) representing
+                a path from origin to destination. Returns empty list if unable to generate
+                a valid path after 3 attempts.    
+        
+        """
         full_sentence = False
 
         random_path = random.choice(self.start_end_points)
@@ -496,52 +568,83 @@ class TrajGenerator:
 
             num_tries += 1
             if num_tries == 3:
-                return []
-
-            
+                return []     
 
     def generate_sentences_using_origin(self, length, seed=None):
-      text = []
-      if seed is not None:
-          random.seed(seed)
-          current_trigram = random.sample(self.start_end_points, min(len(self.start_end_points), self.num_sentences))[0][0]
-      else:
-          current_trigram = random.choice(self.start_end_points)[0]
+        """Generate a trajectory of specified length starting from a random origin point using trigram language model.
+
+        Creates a trajectory by starting with an origin point pair and extending it token by token
+        using weighted random selection based on trigram frequencies. This method follows a 
+        traditional n-gram language model approach where the next token is probabilistically 
+        chosen based on the frequency distribution of observed trigrams in the training data.  
       
-      text.extend(current_trigram)
 
-      while len(text) < length:
-          # Get the list of next tokens and their counts for the current trigram
-          next_tokens_with_counts = self.trigram_dict_original.get(current_trigram, [])
-          if not next_tokens_with_counts:
-              break  
+        Args:
+            length (int): Target length of the trajectory in number of tokens/points.
+                The actual length may be shorter if no valid continuations exist.
+            seed (int, optional): Random seed for reproducible trajectory generation.
+                If provided, ensures deterministic origin selection from available
+                start points. Defaults to None for random selection.
+        
+        Returns:
+            text(list): A trajectory as a list of tokens (coordinate tuples), starting from
+                the selected origin. Length will be min(length, available_path_length).
+                May be shorter than requested if the trajectory reaches a dead end.
+        """
+        text = []
+        if seed is not None:
+            random.seed(seed)
+            current_trigram = random.sample(self.start_end_points, min(len(self.start_end_points), self.num_sentences))[0][0]
+        else:
+            current_trigram = random.choice(self.start_end_points)[0]
+        
+        text.extend(current_trigram)
 
-          # Choose the next token based on its counts
-          total_count = sum(count for _, count in next_tokens_with_counts)
-          random_value = random.randint(1, total_count) 
-          cumulative_count = 0
-          next_token = None
+        while len(text) < length:
+            # Get the list of next tokens and their counts for the current trigram
+            next_tokens_with_counts = self.trigram_dict_original.get(current_trigram, [])
+            if not next_tokens_with_counts:
+                break  
 
-          #pick the next token randomly from the possible next tokens
-          for token, count in next_tokens_with_counts:
-              cumulative_count += count
-              if random_value <= cumulative_count:
-                  next_token = token
-                  break
+            # Choose the next token based on its counts
+            total_count = sum(count for _, count in next_tokens_with_counts)
+            random_value = random.randint(1, total_count) 
+            cumulative_count = 0
+            next_token = None
 
-          # Append the next token to the text
-          text.append(next_token)
+            #pick the next token randomly from the possible next tokens
+            for token, count in next_tokens_with_counts:
+                cumulative_count += count
+                if random_value <= cumulative_count:
+                    next_token = token
+                    break
 
-          # Update the current trigram
-          current_trigram = current_trigram[1:] + (next_token,)
+            # Append the next token to the text
+            text.append(next_token)
 
-      return text
+            # Update the current trigram
+            current_trigram = current_trigram[1:] + (next_token,)
 
+        return text
 
     def convert_sentence_to_traj(self, generated_sentences):
-        """
-        Converts the generated sentences into coordinate points 
-        using the centroid of the cell each point falls into.
+        """Convert tokenized trajectory sentences into geographic coordinate sequences.
+
+        Transforms grid-based token representations (ID tuples) into actual geographic
+        trajectories by mapping each token to its corresponding grid cell centroid. This
+        creates smooth paths through the geographic space using the pre-computed cell
+        center points stored in the grid_center GeoDataFrame.
+
+        Args:
+            generated_sentences (list): A list of trajectory sentences, where each sentence
+                is a list of tokens. Each token is a tuple (column, row) representing a
+                grid cell ID, e.g., [[(0,1), (1,1), (2,1)], [(3,3), (3,4), (4,4)]].
+        
+        Returns:
+            all_points(list): A list of trajectories, where each trajectory is a list of Shapely Point
+                objects representing the geographic coordinates. Each Point corresponds to
+                the centroid of the grid cell identified by the token. Invalid tokens are
+                silently skipped.
         
         """
         token_to_geometry = dict(zip(self.grid_center['ID'], self.grid_center['geometry']))
@@ -553,8 +656,25 @@ class TrajGenerator:
 
         return all_points
 
-
     def generate_trajs_using_origin_destination(self):
+        """Generate synthetic trajectories using origin-destination pairs and return in multiple formats.
+
+        Creates a specified number of synthetic trajectories by repeatedly calling the origin-destination
+        generation algorithm. Each trajectory connects randomly selected start and end points through
+        spatially coherent paths. The method ensures all generated trajectories are valid (non-empty)
+        and converts them from token sequences to geographic coordinates. Results are returned in
+        two formats for different use cases.
+
+        Returns:
+            tuple: A pair of DataFrames containing the same trajectories in different formats:
+                - df (DataFrame): Trajectories as coordinate lists with columns:
+                    - 'trip_id': Unique identifier (1 to n)
+                    - 'geometry': List of [x, y] coordinate pairs
+                - gdf (GeoDataFrame): Trajectories as Shapely geometries with columns:
+                    - 'trip_id': Unique identifier (1 to n)
+                    - 'geometry': List of Shapely Point objects
+        
+        """
         new_generated_sentences = []
         with tqdm(total=self.num_sentences, desc="Generating sentences") as pbar:
             while len(new_generated_sentences) < self.num_sentences:
@@ -583,6 +703,30 @@ class TrajGenerator:
         return df, gdf
 
     def generate_trajs_using_origin(self, sentence_length, seed=None):
+        """Generate synthetic trajectories of specified length from origin points and return in multiple formats.
+
+        Creates a specified number of trajectories by repeatedly generating paths from randomly
+        selected origin points using the trigram language model approach. Each trajectory extends
+        from its origin for approximately the target length. The method filters out trajectories
+        that are significantly shorter than requested (more than 5 tokens short) to ensure quality.
+        Results are returned in two formats for different use cases.
+        
+        Args:
+            sentence_length (int): Target length for each trajectory in number of tokens/points.
+                Trajectories shorter than (sentence_length - 5) are rejected and regenerated.
+            seed (int, optional): Random seed for reproducible batch generation.
+                If provided, generates deterministic set of trajectories. Defaults to None
+                for random generation.
+
+        Returns:
+            tuple: A pair of DataFrames containing the same trajectories in different formats:
+                - df (DataFrame): Trajectories as coordinate lists with columns:
+                    - 'trip_id': Unique identifier (1 to n)
+                    - 'geometry': List of [x, y] coordinate pairs
+                - gdf (DataFrame): Trajectories as Shapely geometries with columns:
+                    - 'trip_id': Unique identifier (1 to n)
+                    - 'geometry': List of Shapely Point objects
+        """
         new_generated_sentences = []
 
         if seed is not None:
