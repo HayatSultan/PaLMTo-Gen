@@ -55,9 +55,7 @@ class ConvertToToken:
                             with each row being a list of coordinate pairs in (lon, lat) format.
             area(gpd.GeoDataFrame): Shapely polygon delimiting the boundary of a geographical region.
             cell_size(int): side length of a square cell in an area grid.
-
-        Returns:
-            None.
+            
         """
         self.cell_size = cell_size
         self.gdf = process_data(df)
