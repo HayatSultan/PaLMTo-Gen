@@ -5,4 +5,3 @@ palmto_gen
    :maxdepth: 4
 
    Palmto_gen
-   setup
