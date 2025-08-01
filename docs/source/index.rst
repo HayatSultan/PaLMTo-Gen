@@ -6,16 +6,13 @@
 PaLMTo_gen documentation
 ========================
 
-Add your content using ``reStructuredText`` syntax. See the
-`reStructuredText <https://www.sphinx-doc.org/en/master/usage/restructuredtext/index.html>`_
-documentation for details.
-
+PaLMTo_gen is a Python library for generating synthetic trajectory data using ngram language model.
 
 .. toctree::
    :maxdepth: 2
    :caption: Contents:
 
-   ../
+   modules
 
 Indices and tables
 ==================
