@@ -283,6 +283,7 @@ class NgramGenerator:
               has a tuple of cell IDs as its key and its number of occurance as the value.
             start_end_points(list): a list of lists, as returned by find_start_end_points().
         
+        
         """
         start_end_points = self.find_start_end_points()
         sentences_reversed = self.reverse_sentences(self.sentences)
@@ -863,6 +864,7 @@ class DisplayTrajs():
                     - 'point_region': The geometry (polygon) of the grid cell containing 
                     the point, or 'nan' if the point doesn't fall within any grid cell
         
+                    
         """
         grid['Region'] = [i for i in range(0, num_cells)]
         df = df.explode('geometry')
