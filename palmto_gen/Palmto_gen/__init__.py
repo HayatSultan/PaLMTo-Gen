@@ -280,7 +280,7 @@ class NgramGenerator:
 
         Returns:
             ngrams(dict): a dictionary of four dictionaries. Each inner dictionary is comprised of items that
-              has a tuple of cell IDs as its key and its number of occurance as the value.
+            has a tuple of cell IDs as its key and its number of occurance as the value.
             start_end_points(list): a list of lists, as returned by find_start_end_points().
 
         """
@@ -859,8 +859,8 @@ class DisplayTrajs():
         Returns:
             gpd.GeoDataFrame: A merged GeoDataFrame where each row represents a single 
                 trajectory point with the following additional columns:
-                    - 'Region': The ID of the grid cell containing the point
-                    - 'point_region': The geometry (polygon) of the grid cell containing 
+                - 'Region': The ID of the grid cell containing the point
+                - 'point_region': The geometry (polygon) of the grid cell containing 
                     the point, or 'nan' if the point doesn't fall within any grid cell
         
         """
