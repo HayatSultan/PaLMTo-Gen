@@ -15,3 +15,5 @@ geopy>=2.2.0
 shapely>=1.8.0
 folium>=0.12.0
 plotly>=5.0.0
+ipython
+.
