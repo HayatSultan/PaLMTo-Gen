@@ -10,7 +10,7 @@ classifiers = [
 
 setup(
     name='Palmto_gen',
-    version='0.3',
+    version='0.3.1',
     packages=find_packages(),
     include_package_data=True,
     package_data={
@@ -25,5 +25,10 @@ setup(
     license='MIT',
     classifiers = classifiers,
     keywords='trajectory generation' 'Probablistic Language Models',
-    install_requires= ['geopandas', 'tqdm', 'geopy', 'scipy', 'folium']
+    install_requires= ['geopandas', 'tqdm', 'geopy', 'scipy', 'folium'],
+    project_urls={
+        'Documentation': 'https://palmto-gen.readthedocs.io/en/latest/',
+        'Source': 'https://github.com/HayatSultan/PaLMTo-Gen',
+        'Bug Reports': 'https://github.com/HayatSultan/PaLMTo-Gen/issues'
+    }
 )
