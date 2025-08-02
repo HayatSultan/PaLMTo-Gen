@@ -24,3 +24,7 @@ Change Log
 0.3 (29/07/2025)
 -----------------
 - Third Release
+
+0.3.2 (01/08/2025)
+-----------------
+- Release a patch that add additonal metadata to the library
