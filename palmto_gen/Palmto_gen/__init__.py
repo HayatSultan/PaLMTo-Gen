@@ -860,9 +860,8 @@ class DisplayTrajs():
             gpd.GeoDataFrame: A merged GeoDataFrame where each row represents a single 
             trajectory point with the following additional columns:
                 - 'Region': The ID of the grid cell containing the point
-                - 'point_region': The geometry (polygon) of the grid cell containing 
-               the point, or 'nan' if the point doesn't fall within any grid cell
-        
+                - 'point_region': The geometry (polygon) of the grid cell containing the point, or 'nan' if the point doesn't fall within any grid cell.
+
         """
         grid['Region'] = [i for i in range(0, num_cells)]
         df = df.explode('geometry')
