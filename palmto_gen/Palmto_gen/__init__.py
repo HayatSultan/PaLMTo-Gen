@@ -921,3 +921,21 @@ class DisplayTrajs():
         ax.set_xlabel('Longitude')
         ax.set_ylabel('Latitude')
         ax.set_title('Generated Trajectories')
+
+class ConvertToTemporalToken:
+    def __init__(self, df, area, cell_size, time_interval_mins):
+        """Initialize a spatial-temporal tokenization class that maps coord pairs to a 3D space.
+
+        Args:
+            df(pd.DataFrame): dataframe with 'geometry', 'timestamp' columns.
+            area(gpd.GeoDataFrame): Shapely polygon delimiting the boundary of a geographical region.
+            cell_size: side length of each cell in a grid
+            time_interval_mins: sampling time interval between two adjacent coord pairs measured in mins.
+        """
+        self.gdf = self.process_temporal_data(df)
+        self.area = area
+        self.cell_size = cell_size
+        self.time_interval_mins = time_interval_mins
+        
+        
+        
