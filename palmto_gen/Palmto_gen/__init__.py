@@ -927,15 +927,34 @@ class ConvertToTemporalToken:
         """Initialize a spatial-temporal tokenization class that maps coord pairs to a 3D space.
 
         Args:
-            df(pd.DataFrame): dataframe with 'geometry', 'timestamp' columns.
+            df(pd.DataFrame): dataframe with a minimum of 'geometry', 'timestamp' columns.
             area(gpd.GeoDataFrame): Shapely polygon delimiting the boundary of a geographical region.
             cell_size: side length of each cell in a grid
             time_interval_mins: sampling time interval between two adjacent coord pairs measured in mins.
+
+        Raises:
+            ValueError: if 'timestamp' column is missing or not in Unix time format
         """
+        required_cols = ['geometry', 'timestamp']
+        missing_cols = [col for col in required_cols if col not in df.columns]
+        if missing_cols:
+            raise ValueError(f"Dataframe must contain cols: {missing_cols}")
+        
+        # Enforce Unix time format on timestamp column
+        if not pd.api.types.is_numeric_dtype(df['timestamp']):
+            raise ValueError(f"'Timestamp' column must be in Unix time format.")
+
         self.gdf = self.process_temporal_data(df)
         self.area = area
         self.cell_size = cell_size
         self.time_interval_mins = time_interval_mins
-        
+
+    def process_temporal_data(self, df):
+        """Tranform trajectory trips into individual coord points and preserve their temporal info.
+         
+        """
+        pass
+
+
         
         
