@@ -923,14 +923,14 @@ class DisplayTrajs():
         ax.set_title('Generated Trajectories')
 
 class ConvertToTemporalToken:
-    def __init__(self, df, area, cell_size, time_interval_mins):
+    def __init__(self, df, area, cell_size, time_interval_secs):
         """Initialize a spatial-temporal tokenization class that maps coord pairs to a 3D space.
 
         Args:
             df(pd.DataFrame): dataframe with a minimum of 'geometry', 'timestamp' columns.
             area(gpd.GeoDataFrame): Shapely polygon delimiting the boundary of a geographical region.
             cell_size: side length of each cell in a grid
-            time_interval_mins: sampling time interval between two adjacent coord pairs measured in mins.
+            time_interval_secs: sampling time interval between two adjacent coord pairs measured in seconds.
 
         Raises:
             ValueError: if 'timestamp' column is missing or not in Unix time format
@@ -944,16 +944,17 @@ class ConvertToTemporalToken:
         if not pd.api.types.is_numeric_dtype(df['timestamp']):
             raise ValueError(f"'Timestamp' column must be in Unix time format.")
 
-        self.gdf = self.process_temporal_data(df)
+        self.gdf = process_data(df)
         self.area = area
         self.cell_size = cell_size
-        self.time_interval_mins = time_interval_mins
+        self.time_interval_mins = time_interval_secs
 
-    def process_temporal_data(self, df):
-        """Tranform trajectory trips into individual coord points and preserve their temporal info.
-         
-        """
-        pass
+    
+    
+
+
+
+
 
 
         
