@@ -931,6 +931,23 @@ def convert_to_3d_points(coord_list):
     Returns:
         list: coordinate-converted Shapely points with time metadata.
     """
+    points = []
+    count = 0
+    for coord in coord_list:
+        if len(coord) == 3:
+            lon, lat, time = coord
+            point = Point(lon, lat)
+            point.time = time
+            points.append(point)
+        if len(coord) == 2:
+            count += 1
+            lon, lat = coord
+            point = Point(lon, lat)
+            point.time = 0
+            points.append(point)
+    if count != 0:
+        print(f"Warning: {count} coordinate pairs with time info missing are assigned default time of 0.")
+    return points
 
 class ConvertToTemporalToken:
     def __init__(self, df, area, cell_size, time_interval_mins=30):
