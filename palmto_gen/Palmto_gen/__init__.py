@@ -5,6 +5,8 @@ import matplotlib.pyplot as plt
 from tqdm import tqdm
 import scipy
 import math
+from timezonefinder import TimezoneFinder
+from datetime import datetime
 
 import numpy as np
 from geopy.distance import geodesic as GD
@@ -922,24 +924,50 @@ class DisplayTrajs():
         ax.set_ylabel('Latitude')
         ax.set_title('Generated Trajectories')
 
+def convert_time(unix_time, lon, lat):
+    """
+        Convert timestamps formatted as epoch Unix timestamp in seconds to a local time
+        indicated by geographical coordinates
+
+        Args:
+            unix_time: timestamp in epoch Unix format
+            lat: latitude of a coordinate
+            lon: longitude of a coordinate
+
+        Returns:
+            float: hours in a day rounded to one decimal place
+    """
+    # Obtain timezone from coords
+    tz = TimezoneFinder()
+    timezone = tz.timezone_at(lng=lon, lat=lat)
+
+    if not timezone:
+        raise ValueError(f"Could not find timezone for coordinates Lon: {lon}, Lat: {lat}")
+
+    dt = datetime.fromtimestamp(unix_time, tz=ZoneInfo(timezone))
+    hrs = dt.hour + dt.minute/60.0 + dt.second/3600.0
+    hrs = round(hrs, 1)
+
+    return hrs
+
 def convert_to_3d_points(coord_list):
-    """Convert 3D coordinate triplets into Shapely Point objects with time information.
+    """Convert 3D coordinate triplets into Shapely Point objects that substitute time for elevation.
+
+    Instead of storing elevation of a coordinate in the third parameter of a Point, we replace it with time 
+    represented as a fractional number with one decimal place. Note original time must be a Unix timestamp.
 
     Args:
-        coord_list(list): coordinate triplets in (lon, lat, time) format.
+        coord_list(list): coordinate triplets in (lon, lat, unix_time) format.
     
     Returns:
-        list: coordinate-converted Shapely points with time metadata.
+        list: coordinate-converted Shapely Point object formatted as (lon, lat, hrs).
     """
     points = []
     count = 0
     for coord in coord_list:
         if len(coord) == 3:
             lon, lat, time = coord
-            points.append({
-                'point': Point(lon, lat),
-                'time': time
-            })
+            point = Point(lon, lat, time)
         if len(coord) == 2:
             count += 1
             lon, lat = coord
@@ -963,7 +991,7 @@ def process_3d_data(df):
     tqdm.pandas()
     df['geometry'] = df['geometry'].progress_apply(convert_to_3d_points)
     df_points = df.explode('geometry')
-    
+
     df_points['time'] = df_points['geometry'].apply(lambda p: p['time'])
     df_points['geometry'] = df_points['geometry'].apply(lambda p: p['point'])
     
@@ -990,7 +1018,7 @@ class ConvertToTemporalToken:
         self.cell_size = cell_size
         self.time_interval_mins = time_interval_mins
 
-    
+
     
 
 
