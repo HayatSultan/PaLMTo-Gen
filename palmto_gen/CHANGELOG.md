@@ -32,3 +32,7 @@ Change Log
 0.3.3a1 (04/10/2025)
 -----------------
 - Add new function and classes for handling 3D trajectory data
+
+0.3.3a2 (04/10/2025)
+-----------------
+- Fix attribute error in 3D representation of Shapely Point objects
