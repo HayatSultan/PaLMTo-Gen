@@ -36,3 +36,7 @@ Change Log
 0.3.3a2 (04/10/2025)
 -----------------
 - Fix attribute error in 3D representation of Shapely Point objects
+
+0.3.3a3 (04/10/2025)
+-----------------
+- Fix a minor error in how 3D data is processed
