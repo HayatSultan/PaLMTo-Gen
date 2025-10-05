@@ -949,6 +949,23 @@ def convert_to_3d_points(coord_list):
         print(f"Warning: {count} coordinate pairs with time info missing are assigned default time of 0.")
     return points
 
+def process_3d_data(df):
+    """Convert list-formatted 3D trajectories to individual Shapely Point with time.
+
+    Args:
+        df(pd.DataFrame): an object containing at least a "geometry" column with [lon, lat, time] format.
+
+    Returns:
+        gpd.GeoDataFrame: an object compliant with WGS84 reference system with time information.
+    """
+    tqdm.pandas()
+    df['geometry'] = df['geometry'].progress_apply(convert_to_3d_points)
+    df_points = df.explode('geometry')
+
+    df_points['time'] = df_points['geometry'].apply(lambda p: getattr(p, 'time', 0))
+    gdf = gpd.GeoDataFrame(df_points, geometry="geometry", crs="EPSG:4326")
+    return gdf
+
 class ConvertToTemporalToken:
     def __init__(self, df, area, cell_size, time_interval_mins=30):
         """Initialize a spatial-temporal tokenization class that maps coord pairs to a 3D space.
@@ -964,7 +981,7 @@ class ConvertToTemporalToken:
         """
         assert 'geometry' in df.columns, "Required column 'geometry' is missing."
 
-        self.gdf = process_data(df)
+        self.gdf = process_3d_data(df)
         self.area = area
         self.cell_size = cell_size
         self.time_interval_mins = time_interval_mins
