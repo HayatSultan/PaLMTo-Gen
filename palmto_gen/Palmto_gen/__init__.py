@@ -924,7 +924,7 @@ class DisplayTrajs():
         ax.set_ylabel('Latitude')
         ax.set_title('Generated Trajectories')
 
-def convert_time(unix_time, lon, lat):
+def convert_time(unix_time, timezone):
     """
         Convert timestamps formatted as epoch Unix timestamp in seconds to a local time
         indicated by geographical coordinates
@@ -937,13 +937,6 @@ def convert_time(unix_time, lon, lat):
         Returns:
             float: hours in a day rounded to one decimal place
     """
-    # Obtain timezone from coords
-    tz = TimezoneFinder()
-    timezone = tz.timezone_at(lng=lon, lat=lat)
-
-    if not timezone:
-        raise ValueError(f"Could not find timezone for coordinates Lon: {lon}, Lat: {lat}")
-
     dt = datetime.fromtimestamp(unix_time, tz=ZoneInfo(timezone))
     hrs = dt.hour + dt.minute/60.0 + dt.second/3600.0
     hrs = round(hrs, 1)
@@ -964,19 +957,46 @@ def convert_to_3d_points(coord_list):
     """
     points = []
     count = 0
+    skipped_count = 0
+    
+    # Obtain timezone for current row of coords assuming a trip stays in the same timezone
+    tz = TimezoneFinder()
+    timezone = tz.timezone_at(lng=coord_list[0][0], lat=coord_list[0][1])
+    if not timezone:
+        raise ValueError(f"Could not find timezone for current trajectory trip.")
+
     for coord in coord_list:
         if len(coord) == 3:
             lon, lat, time = coord
-            point = Point(lon, lat, time)
-        if len(coord) == 2:
-            count += 1
+            
+            # Check if time is a valid Unix timestamp(int or float)
+            try:
+                time_float = float(time)
+
+                if 0 <= time_float <= 4102444800:  # Jan 1, 1970 to Jan 1, 2100
+                    # Convert Unix timestamp to local hours in a day
+                    hrs = convert_time(time_float, timezone)
+                    point = Point(lon, lat, hrs)
+                    points.append(point)
+                else:
+                    skipped_count += 1
+                    continue
+            except (ValueError, TypeError, OSError):
+                skipped_count += 1
+                continue
+        
+        elif len(coord) == 2:
             lon, lat = coord
-            points.append({
-                'point': Point(lon, lat),
-                'time': 0
-            })
+            count += 1
+            point = Point(lon, lat)
+            points.append(point)
+    
     if count != 0:
         print(f"Warning: {count} coordinate pairs with time info missing are assigned default time of 0.")
+            
+    if skipped_count != 0:
+        print(f"Warning: {skipped_count} coordinates with invalid time format were skipped.")
+        
     return points
 
 def process_3d_data(df):
