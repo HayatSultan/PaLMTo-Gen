@@ -936,15 +936,17 @@ def convert_to_3d_points(coord_list):
     for coord in coord_list:
         if len(coord) == 3:
             lon, lat, time = coord
-            point = Point(lon, lat)
-            point.time = time
-            points.append(point)
+            points.append({
+                'point': Point(lon, lat),
+                'time': time
+            })
         if len(coord) == 2:
             count += 1
             lon, lat = coord
-            point = Point(lon, lat)
-            point.time = 0
-            points.append(point)
+            points.append({
+                'point': Point(lon, lat),
+                'time': time
+            })
     if count != 0:
         print(f"Warning: {count} coordinate pairs with time info missing are assigned default time of 0.")
     return points
