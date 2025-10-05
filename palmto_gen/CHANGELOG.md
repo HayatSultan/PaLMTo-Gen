@@ -28,3 +28,7 @@ Change Log
 0.3.2 (01/08/2025)
 -----------------
 - Release a patch that add additonal metadata to the library
+
+0.3.3a1 (04/10/2025)
+-----------------
+- Add new function and classes for handling 3D trajectory data

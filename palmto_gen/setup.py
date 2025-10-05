@@ -10,7 +10,7 @@ classifiers = [
 
 setup(
     name='Palmto_gen',
-    version='0.3.2',
+    version='0.3.3a1',
     packages=find_packages(),
     include_package_data=True,
     package_data={
