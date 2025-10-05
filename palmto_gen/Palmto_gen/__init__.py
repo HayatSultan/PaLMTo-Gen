@@ -963,9 +963,10 @@ def process_3d_data(df):
     tqdm.pandas()
     df['geometry'] = df['geometry'].progress_apply(convert_to_3d_points)
     df_points = df.explode('geometry')
-
-    df_points['geometry'] = df_points['geometry'].apply(lambda p: p['point'])
+    
     df_points['time'] = df_points['geometry'].apply(lambda p: p['time'])
+    df_points['geometry'] = df_points['geometry'].apply(lambda p: p['point'])
+    
     gdf = gpd.GeoDataFrame(df_points, geometry="geometry", crs="EPSG:4326")
     return gdf
 
