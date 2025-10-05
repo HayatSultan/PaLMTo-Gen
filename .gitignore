@@ -9,3 +9,6 @@ PKG-INFO
 
 # Python cache
 __pycache__/
+
+# Local test script
+test.py
