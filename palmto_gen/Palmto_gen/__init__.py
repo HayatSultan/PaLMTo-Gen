@@ -945,7 +945,7 @@ def convert_to_3d_points(coord_list):
             lon, lat = coord
             points.append({
                 'point': Point(lon, lat),
-                'time': time
+                'time': 0
             })
     if count != 0:
         print(f"Warning: {count} coordinate pairs with time info missing are assigned default time of 0.")
@@ -964,7 +964,8 @@ def process_3d_data(df):
     df['geometry'] = df['geometry'].progress_apply(convert_to_3d_points)
     df_points = df.explode('geometry')
 
-    df_points['time'] = df_points['geometry'].apply(lambda p: getattr(p, 'time', 0))
+    df_points['geometry'] = df_points['geometry'].apply(lambda p: p['point'])
+    df_points['time'] = df_points['geometry'].apply(lambda p: p['time'])
     gdf = gpd.GeoDataFrame(df_points, geometry="geometry", crs="EPSG:4326")
     return gdf
 
