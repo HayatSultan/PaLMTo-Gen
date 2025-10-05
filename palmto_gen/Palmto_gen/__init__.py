@@ -988,7 +988,7 @@ def convert_to_3d_points(coord_list):
         elif len(coord) == 2:
             lon, lat = coord
             count += 1
-            point = Point(lon, lat)
+            point = Point(lon, lat, 0)
             points.append(point)
     
     if count != 0:
@@ -1012,8 +1012,8 @@ def process_3d_data(df):
     df['geometry'] = df['geometry'].progress_apply(convert_to_3d_points)
     df_points = df.explode('geometry')
 
-    df_points['time'] = df_points['geometry'].apply(lambda p: p['time'])
-    df_points['geometry'] = df_points['geometry'].apply(lambda p: p['point'])
+    points_and_time = df_points['geometry'].apply(lambda p: (Point(p[0], p[1]), p[2]))
+    df_points['geometry'], df_points['time'] = zip(*points_and_time)
     
     gdf = gpd.GeoDataFrame(df_points, geometry="geometry", crs="EPSG:4326")
     return gdf
