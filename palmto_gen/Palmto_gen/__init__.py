@@ -1020,14 +1020,14 @@ def process_3d_data(df):
     return gdf
 
 class ConvertToTemporalToken:
-    def __init__(self, df, area, cell_size, time_interval_mins=30):
+    def __init__(self, df, area, cell_size, time_interval_hr=0.5):
         """Initialize a spatial-temporal tokenization class that maps coord pairs to a 3D space.
 
         Args:
             df(pd.DataFrame): dataframe with a minimum of 'geometry', 'timestamp' columns.
             area(gpd.GeoDataFrame): Shapely polygon delimiting the boundary of a geographical region.
             cell_size: side length of each cell in a grid.
-            time_interval_mins: time interval on z axis.
+            time_interval_hr: time interval in hours on z axis.
 
         Raises:
             ValueError: if 'timestamp' column is missing or not in Unix time format
@@ -1037,7 +1037,58 @@ class ConvertToTemporalToken:
         self.gdf = process_3d_data(df)
         self.area = area
         self.cell_size = cell_size
-        self.time_interval_mins = time_interval_mins
+        self.time_interval_hr = time_interval_hr
+
+    def create_3d_grid(self):
+        """Creates a 3D grid with spatial and temporal dimensions.
+
+        In addition to a spatial grid superimposing a geographical area of interest, a third dimension
+        representing time is created to group trajectory points based on its temporal info. A default 
+        time interval of 30 minutes is adopted to generate time bins covering the entire period.
+
+        Returns:
+            tuple: A tuple containing
+                    - spatial_grid(gpd.GeoDataFrame): a geometry column containing 2d spatial grid cells
+                    - time_bins(list): list of time bin boundaries
+                    - rows_per_col(int): number of rows per column in the spatial grid
+                    - int: total number of spatial cells
+                    - num_time_bins(int): total number of time bins
+        """
+        # Create spatial grid (reuse existing logic)
+        xmin, ymin, xmax, ymax = self.area.total_bounds
+        
+        height = GD((ymin, xmax), (ymax, xmax)).m
+        width = GD((ymin, xmin), (ymin, xmax)).m
+
+        grid_cells = []
+        
+        n_cells_h = height / self.cell_size
+        cell_size_h = (ymax - ymin) / n_cells_h
+
+        n_cells_w = width / self.cell_size
+        cell_size_w = (xmax - xmin) / n_cells_w
+
+        for x0 in np.arange(xmin, xmax, cell_size_w):
+            rows_per_col = 0
+            for y0 in np.arange(ymin, ymax, cell_size_h):
+                x1 = x0 + cell_size_w
+                y1 = y0 + cell_size_h
+                grid_cells.append(shapely.geometry.box(x0, y0, x1, y1))
+                rows_per_col += 1
+        
+        spatial_grid = gpd.GeoDataFrame(grid_cells, columns="geometry", crs="EPSG:4326")
+
+        # Create temporal bins
+        min_time = self.gpd['time'].min()
+        max_time = self.gpd['time'].max()
+        time_bins = list(np.arange(min_time, max_time + self.time_interval_hr, self.time_interval_hr))
+        num_time_bins = len(time_bins) - 1
+
+        print(f"Number of spatial cells: {spatial_grid.shape[0]}")
+        print(f"Number of time bins: {num_time_bins}")
+        print(f"Time interval: {self.time_interval_hr * 60} mins")
+
+        return spatial_grid, time_bins, rows_per_col, spatial_grid.shape[0], num_time_bins
 
 
     
