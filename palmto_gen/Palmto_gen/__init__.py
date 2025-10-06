@@ -6,6 +6,7 @@ from tqdm import tqdm
 import scipy
 import math
 from timezonefinder import TimezoneFinder
+from zoneinfo import ZoneInfo
 from datetime import datetime
 
 import numpy as np
@@ -1012,7 +1013,7 @@ def process_3d_data(df):
     df['geometry'] = df['geometry'].progress_apply(convert_to_3d_points)
     df_points = df.explode('geometry')
 
-    points_and_time = df_points['geometry'].apply(lambda p: (Point(p[0], p[1]), p[2]))
+    points_and_time = df_points['geometry'].apply(lambda p: (Point(p.x, p.y), p.z))
     df_points['geometry'], df_points['time'] = zip(*points_and_time)
     
     gdf = gpd.GeoDataFrame(df_points, geometry="geometry", crs="EPSG:4326")
