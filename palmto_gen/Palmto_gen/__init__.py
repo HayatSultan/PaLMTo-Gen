@@ -1090,7 +1090,32 @@ class ConvertToTemporalToken:
 
         return spatial_grid, time_bins, rows_per_col, spatial_grid.shape[0], num_time_bins
 
+    def assign_3d_ids(self, spatial_grid, time_bins, rows_per_col):
+        """Assign each 3D cell a unique ID based on spatial and temporal position.  
 
+        Compared to its 2D version, this variant assigns cube identifiers in the form of (col, row, time)
+        by first iterating through time bin IDs and then columns.
+
+        Args:
+            spatial_grid(gpd.GeoDataFrame): spatial grid returned from create_3d_grid
+            time_bins(list): a list of time bin boundaries
+            rows_per_col(int): number of rows per column in spatial grid
+        
+        Returns:
+            spatial_grid(gpd.GeoDataFrame): spatial grid with an additional column 'Spatial_ID' consisting of
+                (col, row, time) triplet identifier
+        """
+        cells = spatial_grid.shape[0]
+        n_cols = int(cells / n_rows)
+
+        spatial_ids = []
+        for i in range(n_cols):
+            for j in range(rows_per_col):
+                for t in range(len(time_bins)-1):
+                    spatial_ids.append((i, j, t))
+        spatial_grid['Spatial_ID'] = spatial_ids
+
+        return spatial_grid
     
 
 
