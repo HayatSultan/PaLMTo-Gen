@@ -1052,7 +1052,6 @@ class ConvertToTemporalToken:
                     - time_bins(list): list of time bin boundaries
                     - rows_per_col(int): number of rows per column in the spatial grid
                     - int: total number of spatial cells
-                    - num_time_bins(int): total number of time bins
         """
         # Create spatial grid (reuse existing logic)
         xmin, ymin, xmax, ymax = self.area.total_bounds
@@ -1076,19 +1075,19 @@ class ConvertToTemporalToken:
                 grid_cells.append(shapely.geometry.box(x0, y0, x1, y1))
                 rows_per_col += 1
         
-        spatial_grid = gpd.GeoDataFrame(grid_cells, columns="geometry", crs="EPSG:4326")
+        spatial_grid = gpd.GeoDataFrame(grid_cells, columns=["geometry"], crs="EPSG:4326")
 
         # Create temporal bins
-        min_time = self.gpd['time'].min()
-        max_time = self.gpd['time'].max()
+        min_time = self.gdf['time'].min()
+        max_time = self.gdf['time'].max()
         time_bins = list(np.arange(min_time, max_time + self.time_interval_hr, self.time_interval_hr))
-        num_time_bins = len(time_bins) - 1
 
         print(f"Number of spatial cells: {spatial_grid.shape[0]}")
-        print(f"Number of time bins: {num_time_bins}")
+        print(f"Max time: {max_time}, Min time: {min_time}")
+        print(f"Number of time bins: {len(time_bins)-1}")
         print(f"Time interval: {self.time_interval_hr * 60} mins")
 
-        return spatial_grid, time_bins, rows_per_col, spatial_grid.shape[0], num_time_bins
+        return spatial_grid, time_bins, rows_per_col, spatial_grid.shape[0]
 
     def assign_3d_ids(self, spatial_grid, time_bins, rows_per_col):
         """Assign each 3D cell a unique ID based on spatial and temporal position.  
@@ -1106,7 +1105,7 @@ class ConvertToTemporalToken:
                 (col, row, time) triplet identifier
         """
         cells = spatial_grid.shape[0]
-        n_cols = int(cells / n_rows)
+        n_cols = int(cells / rows_per_col)
 
         spatial_ids = []
         for i in range(n_cols):
