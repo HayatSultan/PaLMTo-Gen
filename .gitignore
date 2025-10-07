@@ -11,7 +11,7 @@ PKG-INFO
 __pycache__/
 
 # Local test script
-test.py
+test.*
 
 # Local test csv file
 demo_3d.csv
