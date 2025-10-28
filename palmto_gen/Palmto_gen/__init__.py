@@ -18,6 +18,11 @@ import folium
 from IPython.display import display, HTML
 import random
 
+import dask.dataframe as dd
+import dask_geopandas as dgpd
+from dask.distributed import Client
+
+client = Client()
 
 def convert_to_points(coord_list):
     """Convert coordinate pairs into Shapely Point object.
@@ -44,6 +49,21 @@ def process_data(df):
     df_points = df.explode('geometry')
     gdf = gpd.GeoDataFrame(df_points, geometry='geometry',crs="EPSG:4326")
 
+    return gdf
+
+def process_data_dask(df):
+    """An optmized version of process_data function that leverages Dask
+    """
+    ddf = dd.from_pandas(df, npartitions=8)
+    ddf['geometry'] = ddf['geometry'].map_partitions(
+        lambda x: x.apply(convert_to_points),
+        meta=('geometry', 'object')
+    )
+
+    # Explode in parallel
+    ddf_points = ddf.explode('geometry')
+
+    gdf = dgpd.from_dask_dataframe(ddf_points, geometry='geometry', crs="EPSG:4326")
     return gdf
 
 class ConvertToToken:
