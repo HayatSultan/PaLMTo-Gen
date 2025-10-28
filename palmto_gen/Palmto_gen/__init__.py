@@ -2,6 +2,7 @@ import geopandas as gpd
 import pandas as pd
 import matplotlib.pyplot as plt
 
+from pandas.io.formats.style import Subset
 from tqdm import tqdm
 import scipy
 import math
@@ -63,8 +64,8 @@ def process_data_dask(df):
     # Explode in parallel
     ddf_points = ddf.explode('geometry')
 
-    gdf = dgpd.from_dask_dataframe(ddf_points, geometry='geometry', crs="EPSG:4326")
-    return gdf
+    dgdf = dgpd.from_dask_dataframe(ddf_points, geometry='geometry', crs="EPSG:4326")
+    return dgdf
 
 class ConvertToToken:
     def __init__(self, df, area, cell_size):
@@ -79,6 +80,7 @@ class ConvertToToken:
         """
         self.cell_size = cell_size
         self.gdf = process_data(df)
+        self.dgdf = process_data_dask(df)
         self.area = area
 
     def create_grid(self):
@@ -206,6 +208,23 @@ class ConvertToToken:
         merged_gdf = merged_gdf.dropna(subset=['ID'])
         return merged_gdf
         
+    def merge_with_polygon_dask(self, grid):
+        """Dask-optimized spatial join"""
+        # Convert grid to Dask GeoDataFrame
+        grid_dask = dgpd.from_geopandas(grid, npartitions=4)
+
+        merged_dgdf = dgpd.sjoin(
+            self.dgdf,
+            grid_dask,
+            how='left',
+            predicate='within'
+        )
+
+        # Drop NaN values in parallel
+        merged_dgdf = merged_dgdf.dropna(subset=['ID'])
+        return merged_dgdf.compute()
+
+
     def create_tokens(self):
         """Convert raw coordinate pairs into tokens of (row_id, col_id).
 
