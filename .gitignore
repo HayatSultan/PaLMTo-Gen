@@ -16,3 +16,6 @@ test.py
 # Pipenv files
 Pipfile
 Pipfile.lock
+
+# Temporary csv files for test
+palmto_gen/Palmto_gen/*.csv
