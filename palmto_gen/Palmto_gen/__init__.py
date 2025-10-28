@@ -19,6 +19,7 @@ import folium
 from IPython.display import display, HTML
 import random
 
+import dask.array as da
 import dask.dataframe as dd
 import dask_geopandas as dgpd
 from dask.distributed import Client
@@ -132,6 +133,49 @@ class ConvertToToken:
         print('Number of created cells: ', cell.shape[0])
 
         return cell, n_rows,  cell.shape[0]
+
+    def create_grid_dask(self):
+        """Dask-optimized grid creation"""
+        xmin, ymin, xmax, ymax = self.area.total_bounds
+
+        height = GD((ymin, xmax), (ymax, xmax)).m 
+        width = GD((ymin, xmin), (ymin, xmax)).m 
+
+        n_cells_h = int(height / self.cell_size)
+        cell_size_h = (ymax - ymin) / n_cells_h
+
+        n_cells_w = int(width / self.cell_size)
+        cell_size_w = (xmax - xmin) / n_cells_w
+
+        # Create coordinate arrays with appropriate chunking
+        x_coords = da.arange(xmin, xmax, cell_size_w)
+        y_coords = da.arange(ymin, ymax, cell_size_h)
+
+        # Compute Cartesian product of x coords and y coords
+        xx, yy = da.meshgrid(x_coords, y_coords)
+
+        xx_flat = xx.ravel()
+        yy_flat = yy.ravel()
+
+        def create_boxes(x_block, y_block):
+            boxes = np.empty(len(x_block), dtype=object)
+            for i, (x, y) in enumerate(zip(x_block, y_block)):
+                boxes[i] = shapely.geometry.box(x, y, x+cell_size_w, y+cell_size_h)
+            return boxes
+        
+        # Process in parallel
+        grid_cells = da.map_blocks(
+            create_boxes,
+            xx_flat,
+            yy_flat,
+            dtype='object'
+        ).compute()
+
+        cell = gpd.GeoDataFrame(grid_cells, columns=['geometry'], crs="EPSG:4326")
+        n_rows = int(n_cells_h)
+
+        print(f"Number of created cells: {cell.shape[0]}")
+        return cell, n_rows, cell.shape[0]
 
     def assign_ids(self, grid, n_rows):
         """Assign each cell an unique ID.
